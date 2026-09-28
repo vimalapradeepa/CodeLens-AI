@@ -1,0 +1,297 @@
+{
+  "repo": "sona-1346/Phishing_Website_Detection",
+  "nodes": [
+    {
+      "id": "sona-1346/Phishing_Website_Detection",
+      "node_type": "Repository",
+      "label": "sona-1346/Phishing_Website_Detection"
+    },
+    {
+      "id": "app.py",
+      "node_type": "File",
+      "label": "app.py",
+      "language": "Python"
+    },
+    {
+      "id": "module::feature_extraction.extract_features_list",
+      "node_type": "Module",
+      "label": "feature_extraction.extract_features_list"
+    },
+    {
+      "id": "module::classifier.load_model",
+      "node_type": "Module",
+      "label": "classifier.load_model"
+    },
+    {
+      "id": "app.py::predict_url",
+      "node_type": "Function",
+      "label": "predict_url",
+      "file": "app.py"
+    },
+    {
+      "id": "classifier.py",
+      "node_type": "File",
+      "label": "classifier.py",
+      "language": "Python"
+    },
+    {
+      "id": "module::joblib",
+      "node_type": "Module",
+      "label": "joblib"
+    },
+    {
+      "id": "classifier.py::load_model",
+      "node_type": "Function",
+      "label": "load_model",
+      "file": "classifier.py"
+    },
+    {
+      "id": "feature_extraction.py",
+      "node_type": "File",
+      "label": "feature_extraction.py",
+      "language": "Python"
+    },
+    {
+      "id": "module::pandas",
+      "node_type": "Module",
+      "label": "pandas"
+    },
+    {
+      "id": "module::re",
+      "node_type": "Module",
+      "label": "re"
+    },
+    {
+      "id": "module::urllib.parse.urlparse",
+      "node_type": "Module",
+      "label": "urllib.parse.urlparse"
+    },
+    {
+      "id": "feature_extraction.py::extract_features",
+      "node_type": "Function",
+      "label": "extract_features",
+      "file": "feature_extraction.py"
+    },
+    {
+      "id": "feature_extraction.py::extract_features_list",
+      "node_type": "Function",
+      "label": "extract_features_list",
+      "file": "feature_extraction.py"
+    },
+    {
+      "id": "streamlit_app.py",
+      "node_type": "File",
+      "label": "streamlit_app.py",
+      "language": "Python"
+    },
+    {
+      "id": "module::streamlit",
+      "node_type": "Module",
+      "label": "streamlit"
+    },
+    {
+      "id": "train_model.py",
+      "node_type": "File",
+      "label": "train_model.py",
+      "language": "Python"
+    },
+    {
+      "id": "module::sklearn.pipeline.Pipeline",
+      "node_type": "Module",
+      "label": "sklearn.pipeline.Pipeline"
+    },
+    {
+      "id": "module::sklearn.metrics.accuracy_score",
+      "node_type": "Module",
+      "label": "sklearn.metrics.accuracy_score"
+    },
+    {
+      "id": "module::sklearn.metrics.classification_report",
+      "node_type": "Module",
+      "label": "sklearn.metrics.classification_report"
+    },
+    {
+      "id": "module::sklearn.ensemble.RandomForestClassifier",
+      "node_type": "Module",
+      "label": "sklearn.ensemble.RandomForestClassifier"
+    },
+    {
+      "id": "module::sklearn.preprocessing.StandardScaler",
+      "node_type": "Module",
+      "label": "sklearn.preprocessing.StandardScaler"
+    },
+    {
+      "id": "module::sklearn.model_selection.train_test_split",
+      "node_type": "Module",
+      "label": "sklearn.model_selection.train_test_split"
+    }
+  ],
+  "edges": [
+    {
+      "source": "sona-1346/Phishing_Website_Detection",
+      "target": "app.py",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "sona-1346/Phishing_Website_Detection",
+      "target": "classifier.py",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "sona-1346/Phishing_Website_Detection",
+      "target": "feature_extraction.py",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "sona-1346/Phishing_Website_Detection",
+      "target": "streamlit_app.py",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "sona-1346/Phishing_Website_Detection",
+      "target": "train_model.py",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "app.py",
+      "target": "module::feature_extraction.extract_features_list",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "app.py",
+      "target": "module::classifier.load_model",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "app.py",
+      "target": "app.py::predict_url",
+      "relation": "CALLS"
+    },
+    {
+      "source": "classifier.py",
+      "target": "module::joblib",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "classifier.py",
+      "target": "classifier.py::load_model",
+      "relation": "DEFINES"
+    },
+    {
+      "source": "feature_extraction.py",
+      "target": "module::pandas",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "feature_extraction.py",
+      "target": "module::re",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "feature_extraction.py",
+      "target": "module::urllib.parse.urlparse",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "feature_extraction.py",
+      "target": "feature_extraction.py::extract_features",
+      "relation": "CALLS"
+    },
+    {
+      "source": "feature_extraction.py",
+      "target": "feature_extraction.py::extract_features_list",
+      "relation": "DEFINES"
+    },
+    {
+      "source": "streamlit_app.py",
+      "target": "module::streamlit",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "streamlit_app.py",
+      "target": "module::feature_extraction.extract_features_list",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "streamlit_app.py",
+      "target": "module::classifier.load_model",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "streamlit_app.py",
+      "target": "classifier.py::load_model",
+      "relation": "CALLS"
+    },
+    {
+      "source": "streamlit_app.py",
+      "target": "feature_extraction.py::extract_features_list",
+      "relation": "CALLS"
+    },
+    {
+      "source": "train_model.py",
+      "target": "module::sklearn.pipeline.Pipeline",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "train_model.py",
+      "target": "module::sklearn.metrics.accuracy_score",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "train_model.py",
+      "target": "module::feature_extraction.extract_features_list",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "train_model.py",
+      "target": "module::sklearn.metrics.classification_report",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "train_model.py",
+      "target": "module::pandas",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "train_model.py",
+      "target": "module::joblib",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "train_model.py",
+      "target": "module::sklearn.ensemble.RandomForestClassifier",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "train_model.py",
+      "target": "module::sklearn.preprocessing.StandardScaler",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "train_model.py",
+      "target": "module::sklearn.model_selection.train_test_split",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "train_model.py",
+      "target": "feature_extraction.py::extract_features_list",
+      "relation": "CALLS"
+    }
+  ],
+  "stats": {
+    "total_nodes": 23,
+    "total_edges": 30,
+    "node_types": {
+      "Repository": 1,
+      "File": 5,
+      "Module": 13,
+      "Function": 4
+    },
+    "edge_types": {
+      "CONTAINS": 5,
+      "IMPORTS": 18,
+      "CALLS": 5,
+      "DEFINES": 2
+    }
+  }
+}

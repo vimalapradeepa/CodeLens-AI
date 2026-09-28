@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}CodeLens AI — AI Chat{% endblock %}
+{% block content %}
+
+<section class="page-header">
+  <h1>Ask CodeLens AI</h1>
+  <p class="page-subtitle">Repository-grounded Q&amp;A powered by RAG + LLM</p>
+</section>
+
+<section class="card chat-card">
+
+  {% if not has_knowledge %}
+  <div class="warn-banner">
+    No repository knowledge available yet. <a href="/">Run the analysis pipeline first →</a>
+    Then click <strong>Analyze</strong> on a repository in the Discovery results.
+  </div>
+  {% endif %}
+
+  <div id="chat-messages" class="chat-messages">
+    <div class="chat-msg system">
+      <strong>CodeLens AI</strong>
+      <p>Hello! Ask me anything about the analysed repositories. I use RAG to ground my answers in the actual source code.</p>
+      <p class="chat-agents">
+        <span class="agent-badge">Repository Analysis Agent</span>
+        <span class="agent-badge">Semantic Architecture Agent</span>
+        <span class="agent-badge rag">RAG</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="chat-input-row">
+    <input
+      id="chat-input"
+      type="text"
+      class="text-input"
+      placeholder="How does authentication work? Which file is the entry point? …"
+      onkeydown="if(event.key==='Enter') sendQuestion()"
+    />
+    <button class="btn btn-primary" onclick="sendQuestion()">Send →</button>
+  </div>
+
+  <!-- Example questions -->
+  <div class="example-questions">
+    <p>Examples:</p>
+    <button class="example-q" onclick="setQ('How does authentication work?')">How does authentication work?</button>
+    <button class="example-q" onclick="setQ('Which file contains the main entry point?')">Which file is the entry point?</button>
+    <button class="example-q" onclick="setQ('What classes are responsible for database access?')">Which classes handle the database?</button>
+    <button class="example-q" onclick="setQ('What are the major components of this project?')">Major components?</button>
+  </div>
+</section>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function setQ(q) {
+  document.getElementById('chat-input').value = q;
+  document.getElementById('chat-input').focus();
+}
+
+function sendQuestion() {
+  const input = document.getElementById('chat-input');
+  const question = input.value.trim();
+  if (!question) return;
+
+  appendMsg('user', question);
+  input.value = '';
+  appendTyping();
+
+  fetch('/api/chat', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({question})
+  })
+  .then(r => r.json())
+  .then(data => {
+    removeTyping();
+    if (data.error) {
+      appendMsg('system error', data.error);
+      return;
+    }
+    const sources = (data.sources || []).map(s => `<code>${s}</code>`).join(', ');
+    const llmNote = data.llm_used
+      ? '<span class="agent-badge rag">LLM</span>'
+      : '<span class="agent-badge">Context only</span>';
+    const msg = `${data.answer}
+      ${sources ? `<p class="sources">Relevant files: ${sources}</p>` : ''}
+      <p class="chat-agents">${llmNote} <span class="agent-badge">RAG</span></p>`;
+    appendMsg('system', msg, true);
+  })
+  .catch(err => { removeTyping(); appendMsg('system error', String(err)); });
+}
+
+function appendMsg(role, text, isHtml = false) {
+  const box = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  div.innerHTML = `<strong>${role === 'user' ? 'You' : 'CodeLens AI'}</strong><p>${isHtml ? text : escHtml(text)}</p>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function appendTyping() {
+  const box = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.id = 'typing-indicator';
+  div.className = 'chat-msg system typing';
+  div.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+{% endblock %}

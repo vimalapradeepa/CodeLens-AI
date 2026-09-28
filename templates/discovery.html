@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+{% block title %}CodeLens AI — Repository Discovery{% endblock %}
+{% block content %}
+
+<section class="page-header">
+  <h1>Repository Discovery</h1>
+  <p class="page-subtitle">Keyword filtering and relevance ranking results</p>
+</section>
+
+<!-- Meta summary — rendered server-side (fast) -->
+{% if ranking and ranking.total_ranked %}
+<section class="card" id="meta-card">
+  <div class="discovery-meta">
+    <div class="meta-item">
+      <span class="meta-label">Keywords</span>
+      <span class="meta-value kw-badge" id="meta-keywords">{{ ranking.keywords or "—" }}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Repositories Submitted</span>
+      <span class="meta-value" id="meta-submitted">{{ ranking.total_submitted }}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Matching Repositories</span>
+      <span class="meta-value highlight" id="meta-matching">{{ ranking.total_matching }}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Ranked</span>
+      <span class="meta-value" id="meta-ranked">{{ ranking.total_ranked }}</span>
+    </div>
+  </div>
+</section>
+{% else %}
+<section class="card" id="meta-card" style="display:none">
+  <div class="discovery-meta">
+    <div class="meta-item"><span class="meta-label">Keywords</span><span class="meta-value kw-badge" id="meta-keywords">—</span></div>
+    <div class="meta-item"><span class="meta-label">Repositories Submitted</span><span class="meta-value" id="meta-submitted">—</span></div>
+    <div class="meta-item"><span class="meta-label">Matching Repositories</span><span class="meta-value highlight" id="meta-matching">—</span></div>
+    <div class="meta-item"><span class="meta-label">Ranked</span><span class="meta-value" id="meta-ranked">—</span></div>
+  </div>
+</section>
+{% endif %}
+
+<!-- Results table — always rendered/refreshed via JS from /api/ranking -->
+<section class="card" id="results-card" style="display:none">
+  <h2 class="section-title">Top <span id="ranked-count">0</span> Best-Matching Repositories</h2>
+  <p class="section-hint">Ranked by keyword relevance score across name, description, topics, README, code entities, and language.</p>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Repository</th>
+          <th>Relevance</th>
+          <th>Language</th>
+          <th>Description</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="results-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Error/warning panels (server-side) -->
+{% if ranking and ranking.top_repos %}
+  {% set error_repos = ranking.top_repos | selectattr("error") | list %}
+  {% if error_repos %}
+  <section class="card" style="border-color:var(--warn);">
+    <h3 style="color:var(--warn);">⚠ {{ error_repos | length }} repositor{{ 'ies' if error_repos|length > 1 else 'y' }} could not be fetched</h3>
+    <p style="color:var(--text2);font-size:.88rem;margin:.5rem 0;">
+      Usually caused by the GitHub API rate limit (60 req/hour without a token).
+      Add <code>GITHUB_TOKEN</code> to your <code>.env</code> to raise it to 5,000/hour.
+    </p>
+    <ul style="color:var(--text2);font-size:.85rem;">
+      {% for repo in error_repos %}
+      <li><strong>{{ repo.full_name }}</strong> — {{ repo.error }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+{% endif %}
+
+{% if ranking and ranking.get is not defined %}{% endif %}
+<!-- validation warnings -->
+{% if validation and validation.errors %}
+<section class="card warn-card">
+  <h3>Validation Notes</h3>
+  <ul>
+    {% for err in validation.errors %}
+      <li>{{ err.message }}{% if err.url %} — <code>{{ err.url }}</code>{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if validation and validation.warnings %}
+<section class="card" style="border-color:var(--warn);">
+  <h3 style="color:var(--warn);">⚠ Duplicate URLs Removed</h3>
+  <ul>
+    {% for w in validation.warnings %}
+      <li style="color:var(--text2);font-size:.88rem;">{{ w.message }}</li>
+    {% endfor %}
+  </ul>
+  <p style="color:var(--text2);font-size:.82rem;margin-top:.5rem;">
+    Only unique repositories were ranked. The counter above shows the unique count.
+  </p>
+</section>
+{% endif %}
+
+<!-- Empty state shown until JS confirms there's really nothing -->
+<section class="card empty-card" id="empty-card" style="display:none">
+  <p>No discovery results yet. <a href="/">Run an analysis first →</a></p>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── Medals helper ──────────────────────────────────────── */
+function medalFor(rank) {
+  if (rank === 1) return '<span class="medal gold">🥇</span>';
+  if (rank === 2) return '<span class="medal silver">🥈</span>';
+  if (rank === 3) return '<span class="medal bronze">🥉</span>';
+  return rank;
+}
+
+/* ── Build one table row from a repo object ─────────────── */
+function buildRow(repo, idx) {
+  const rank      = repo.rank      || (idx + 1);
+  const fullName  = repo.full_name || '';
+  const url       = repo.url       || ('#');
+  const score     = typeof repo.relevance_score === 'number' ? repo.relevance_score : 0;
+  const pct       = repo.relevance_pct || (score.toFixed(1) + '%');
+  const desc      = (repo.description || 'No description.').substring(0, 120);
+  const isTop     = rank <= 3 ? 'top-row' : '';
+
+  // Language column: show ALL actual code languages, comma-separated.
+  // code_languages is the filtered list from the /languages API breakdown.
+  // Fall back to primary_language (single value) if code_languages is absent.
+  let langDisplay = '—';
+  if (Array.isArray(repo.code_languages) && repo.code_languages.length > 0) {
+    langDisplay = repo.code_languages.join(', ');
+  } else if (repo.primary_language) {
+    langDisplay = repo.primary_language;
+  }
+
+  return `<tr class="${isTop}">
+    <td class="rank-cell">${medalFor(rank)}</td>
+    <td>
+      <a href="${escH(url)}" target="_blank" class="repo-link">
+        <strong>${escH(fullName)}</strong>
+      </a>
+    </td>
+    <td>
+      <div class="score-bar-wrap">
+        <div class="score-bar" style="width:${Math.min(score,100)}%"></div>
+        <span class="score-label">${escH(pct)}</span>
+      </div>
+    </td>
+    <td><span class="lang-badge">${escH(langDisplay)}</span></td>
+    <td class="desc-cell">${escH(desc)}</td>
+    <td>
+      <a href="/dashboard?repo=${encodeURIComponent(fullName)}"
+         class="btn btn-sm btn-primary"
+         onclick="return triggerAnalysis(event,'${escH(fullName)}')">
+        Analyze
+      </a>
+    </td>
+  </tr>`;
+}
+
+/* ── Render the table from a ranking object ─────────────── */
+function renderRanking(ranking) {
+  const repos = ranking.top_repos || [];
+  if (!repos.length) { showEmpty(); return; }
+
+  // Update meta strip
+  document.getElementById('meta-keywords').textContent  = ranking.keywords      || '—';
+  document.getElementById('meta-submitted').textContent = ranking.total_submitted || '—';
+  document.getElementById('meta-matching').textContent  = ranking.total_matching  || '—';
+  document.getElementById('meta-ranked').textContent    = ranking.total_ranked    || repos.length;
+  document.getElementById('ranked-count').textContent   = ranking.total_ranked    || repos.length;
+
+  document.getElementById('meta-card').style.display    = '';
+  document.getElementById('results-card').style.display = '';
+  document.getElementById('empty-card').style.display   = 'none';
+
+  document.getElementById('results-tbody').innerHTML =
+    repos.map((r, i) => buildRow(r, i)).join('');
+}
+
+function showEmpty() {
+  document.getElementById('meta-card').style.display    = 'none';
+  document.getElementById('results-card').style.display = 'none';
+  document.getElementById('empty-card').style.display   = '';
+}
+
+/* ── On page load: fetch fresh data from /api/ranking ───── */
+document.addEventListener('DOMContentLoaded', () => {
+  fetch('/api/ranking')
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(ranking => {
+      renderRanking(ranking);
+    })
+    .catch(() => {
+      // API returned 404 (no data yet) — check if the server-side
+      // template already rendered data (Jinja ranking variable was set)
+      const tbody = document.getElementById('results-tbody');
+      const metaRanked = parseInt(
+        document.getElementById('meta-ranked')?.textContent || '0', 10);
+      if (metaRanked > 0 && !tbody.children.length) {
+        // Server had data but JS table wasn't built — use server-rendered meta
+        // and fall through; the empty-card was hidden by CSS if ranking was set
+      }
+      showEmpty();
+    });
+});
+
+/* ── Helper ─────────────────────────────────────────────── */
+function escH(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Analyze button ─────────────────────────────────────── */
+
+const POLL_TIMEOUT_MS = 20 * 60 * 1000;  // 20 min absolute safety cap
+
+function resetBtn(btn) {
+  btn.textContent         = "Analyze";
+  btn.style.opacity       = "";
+  btn.style.pointerEvents = "";
+  btn.style.background    = "";
+}
+
+/* Inject (or reuse) a small progress panel beneath the button */
+function getProgressPanel(btn) {
+  let panel = btn.parentElement.querySelector(".analyze-progress");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.className = "analyze-progress";
+    panel.style.cssText =
+      "margin-top:.5rem;font-size:.78rem;color:var(--text2);max-width:280px;line-height:1.6;";
+    btn.parentElement.appendChild(panel);
+  }
+  return panel;
+}
+
+function setProgress(btn, stages) {
+  const panel = getProgressPanel(btn);
+  const ICONS = { done: "✓", running: "⟳", pending: "·" };
+  panel.innerHTML = stages.map(s =>
+    `<div style="color:${s.state==='done'?'var(--accent2)':s.state==='running'?'var(--accent)':'var(--text2)'}">` +
+    `${ICONS[s.state]} ${escH(s.label)}</div>`
+  ).join("");
+}
+
+function clearProgress(btn) {
+  const panel = btn.parentElement.querySelector(".analyze-progress");
+  if (panel) panel.innerHTML = "";
+}
+
+function triggerAnalysis(event, fullName) {
+  event.preventDefault();
+  const btn = event.currentTarget;
+
+  btn.textContent         = "Starting…";
+  btn.style.opacity       = "0.6";
+  btn.style.pointerEvents = "none";
+
+  fetch("/api/analyze", {
+    method:  "POST",
+    headers: {"Content-Type": "application/json"},
+    body:    JSON.stringify({full_name: fullName}),
+  })
+  .then(r => r.json().then(data => ({status: r.status, data})))
+  .then(({status, data}) => {
+    if (status === 409) {
+      // The same repository is already being analyzed —
+      // navigate to its Dashboard to see progress.
+      resetBtn(btn);
+      window.location.href = "/dashboard?repo=" + encodeURIComponent(fullName);
+      return;
+    }
+    if (data.error) {
+      resetBtn(btn);
+      showAnalysisError(btn, data.error);
+      return;
+    }
+    btn.textContent = "Cloning…";
+    setProgress(btn, [
+      {label: "Cloning repository…",            state: "running"},
+      {label: "Agent 1 — source code analysis", state: "pending"},
+      {label: "Agent 2 — code graph",           state: "pending"},
+      {label: "RAG index",                       state: "pending"},
+    ]);
+    pollAnalysis(fullName, btn);
+  })
+  .catch(err => {
+    resetBtn(btn);
+    showAnalysisError(btn, "Network error: " + err);
+  });
+
+  return false;
+}
+
+function pollAnalysis(fullName, btn) {
+  const startedAt     = Date.now();
+  let   navigated     = false;   // ensure we only redirect once
+
+  const timer = setInterval(async () => {
+
+    if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+      clearInterval(timer);
+      fetch("/api/analysis/reset", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({full_name: fullName}),
+      }).catch(() => {});
+      resetBtn(btn);
+      clearProgress(btn);
+      showAnalysisError(btn, "Analysis timed out. Try again.");
+      return;
+    }
+
+    let data;
+    try {
+      const resp = await fetch("/api/status?repo=" + encodeURIComponent(fullName));
+      data = await resp.json();
+    } catch (_) {
+      return;   // network hiccup — keep polling
+    }
+
+    // ── Update progress indicator ────────────────────────
+    const cl = data.clone_done;
+    const a1 = data.agent1_done;
+    const a2 = data.agent2_done;
+    const rg = data.rag_done;
+
+    setProgress(btn, [
+      {label: "Cloning repository",             state: cl ? "done" : "running"},
+      {label: "Agent 1 — source code analysis", state: a1 ? "done" : (cl ? "running" : "pending")},
+      {label: "Agent 2 — code graph",           state: a2 ? "done" : (a1 ? "running" : "pending")},
+      {label: "RAG index",                      state: rg ? "done" : (a2 ? "running" : "pending")},
+    ]);
+
+    // Update button text to reflect current stage so it doesn't appear stuck
+    if (!cl) {
+      btn.textContent = "Cloning…";
+    } else if (!a1) {
+      btn.textContent = "Analyzing code…";
+    } else if (!a2) {
+      btn.textContent = "Building graph…";
+    } else if (!rg) {
+      btn.textContent = "Building RAG…";
+    } else {
+      btn.textContent = "Finalizing…";
+    }
+
+    // ── Error handling ───────────────────────────────────
+    if (data.error) {
+      clearInterval(timer);
+      resetBtn(btn);
+      clearProgress(btn);
+      showAnalysisError(btn, data.error);
+      return;
+    }
+
+    // ── Navigate as soon as cloning is done ──────────────────────────
+    // Once the repo is cloned, the Dashboard can be shown immediately.
+    // Agent 1 (up to 187 s for large repos), Agent 2, and RAG all
+    // continue in the background — the button no longer appears stuck.
+    if (data.clone_done && !navigated) {
+      navigated = true;
+      clearInterval(timer);
+      window.location.href = "/dashboard?repo=" + encodeURIComponent(fullName);
+      return;
+    }
+
+    // ── Fallback: full completion ─────────────────────────────────────
+    if (data.done && !navigated) {
+      navigated = true;
+      clearInterval(timer);
+      window.location.href = "/dashboard?repo=" + encodeURIComponent(fullName);
+    }
+
+  }, 1500);   // poll every 1.5 s
+}
+
+function showAnalysisError(btn, message, isHtml = false) {
+  let errEl = btn.parentElement.querySelector(".analyze-err");
+  if (!errEl) {
+    errEl = document.createElement("div");
+    errEl.className = "analyze-err";
+    errEl.style.cssText =
+      "color:var(--danger);font-size:.8rem;margin-top:.4rem;max-width:260px;";
+    btn.parentElement.appendChild(errEl);
+  }
+  if (isHtml) {
+    errEl.innerHTML = message;
+  } else {
+    errEl.textContent = message;
+  }
+  setTimeout(() => { errEl.textContent = ""; errEl.innerHTML = ""; }, 20000);
+}
+</script>
+{% endblock %}

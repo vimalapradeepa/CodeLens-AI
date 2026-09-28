@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}CodeLens AI — About{% endblock %}
+{% block content %}
+
+<section class="page-header">
+  <h1>About CodeLens AI</h1>
+  <p class="page-subtitle">AI-Powered Multi-Agent Open Source Project Analyzer</p>
+</section>
+
+<section class="card">
+  <h2 class="section-title">Project Overview</h2>
+  <p>CodeLens AI is a final-year AI &amp; Data Science project that demonstrates a Multi-Agent AI system for automated software comprehension of open-source GitHub repositories.</p>
+  <p>The system accepts multiple GitHub URLs, filters them by keyword relevance, ranks them, and then dispatches two independent custom agents to deeply analyse repository structure, extract code entities, build a semantic code graph, and answer developer questions through Retrieval-Augmented Generation.</p>
+</section>
+
+<section class="card">
+  <h2 class="section-title">Phase 1 — Repository Analysis Agent</h2>
+  <ul>
+    <li>GitHub URL validation (5–10 repos)</li>
+    <li>Keyword-based relevance scoring with configurable weights</li>
+    <li>Top-10 repository ranking</li>
+    <li>Shallow repository cloning via Git</li>
+    <li>Python AST-based code entity extraction (classes, methods, functions, imports, calls)</li>
+    <li>Java source analysis using javalang + regex fallback</li>
+    <li>Repository statistics computation</li>
+    <li>Structured JSON knowledge generation</li>
+    <li>Human-readable Markdown report</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2 class="section-title">Phase 2 — Semantic Code Graph Agent + RAG</h2>
+  <ul>
+    <li>Semantic code graph built from Agent 1 knowledge (NetworkX + PyVis)</li>
+    <li>Node types: Repository, File, Class, Method, Function, Module, Package</li>
+    <li>Edge types: CONTAINS, IMPORTS, CALLS, INHERITS, DEFINES, DEPENDS_ON</li>
+    <li>Architecture layer inference (Presentation / Service / Data)</li>
+    <li>Entry-point and key-component detection</li>
+    <li>Cyclic dependency detection</li>
+    <li>Interactive HTML graph visualisation</li>
+    <li>Shared Knowledge layer consumed by RAG</li>
+    <li>RAG pipeline: chunking → sentence-transformer embeddings → FAISS store → LLM</li>
+    <li>Developer Q&amp;A with source-file references</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2 class="section-title">Technology Stack</h2>
+  <div class="tech-grid">
+    <div class="tech-item"><strong>Backend</strong> Python 3, Flask</div>
+    <div class="tech-item"><strong>Code Analysis</strong> Python AST, javalang</div>
+    <div class="tech-item"><strong>Graph</strong> NetworkX, PyVis</div>
+    <div class="tech-item"><strong>RAG</strong> sentence-transformers, FAISS</div>
+    <div class="tech-item"><strong>LLM</strong> OpenAI API / Groq (configurable)</div>
+    <div class="tech-item"><strong>Frontend</strong> HTML5, CSS3, JavaScript</div>
+    <div class="tech-item"><strong>GitHub API</strong> REST API v3</div>
+    <div class="tech-item"><strong>Version Control</strong> Git (shallow clone)</div>
+  </div>
+</section>
+
+{% endblock %}

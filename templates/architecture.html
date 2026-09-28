@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+{% block title %}CodeLens AI — Architecture{% endblock %}
+{% block content %}
+
+<section class="page-header">
+  <h1>Repository Architecture</h1>
+  <p class="page-subtitle">Agent 2 — {{ repo or "No repository selected" }}</p>
+</section>
+
+{% if arch %}
+
+{# ── Build human-readable summary from actual arch data ──────────── #}
+{% set repo_name = arch.repo_name or repo %}
+{% set top_comp = arch.key_components[:3] if arch.key_components else [] %}
+
+<!-- ── 1. ARCHITECTURE SUMMARY ─────────────────────────────────────── -->
+<section class="card">
+  <h2 class="section-title">📋 Architecture Summary</h2>
+  <p style="color:var(--text);line-height:1.9;max-width:860px;font-size:.95rem;">
+
+    {# Opening sentence about the repo #}
+    <strong>{{ repo_name }}</strong> is a software project
+
+    {# Language hint #}
+    {% set py = arch.graph_stats.node_types.get('File', 0) if arch.graph_stats and arch.graph_stats.node_types else 0 %}
+    that has been analysed by CodeLens AI.
+
+    {# Entry points #}
+    {% if arch.entry_points %}
+    The application starts from
+    <strong>{{ arch.entry_points[0].split('/')[-1] }}</strong>{% if arch.entry_points | length > 1 %}
+    and <strong>{{ arch.entry_points[1].split('/')[-1] }}</strong>{% endif %},
+    which {% if arch.entry_points | length > 1 %}serve{% else %}serves{% endif %} as the main
+    {% if arch.entry_points | length > 1 %}entry points{% else %}entry point{% endif %}.
+    {% endif %}
+
+    {# Layer descriptions #}
+    {% if arch.layers %}
+      {% set layer_desc = {
+        'Presentation': 'handles user-facing features such as routes, views, and API endpoints',
+        'Service':      'contains the core business logic and application processing',
+        'Data':         'manages data models, database access, and storage',
+        'Unclassified': 'contains supporting utilities and helper modules'
+      } %}
+      The project is organised into
+      {{ arch.layers | length }} architectural
+      {% if arch.layers | length == 1 %}layer{% else %}layers{% endif %}:
+      {% for layer_name, layer_files in arch.layers.items() %}
+        the <strong>{{ layer_name }} layer</strong>
+        ({{ layer_desc.get(layer_name, 'contains supporting code') }}
+        — {{ layer_files | length }} file{% if layer_files | length != 1 %}s{% endif %}){% if not loop.last %},{% endif %}
+      {% endfor %}.
+    {% endif %}
+
+    {# Key components #}
+    {% if arch.key_components %}
+    The most central components are
+    {% for comp in arch.key_components[:3] %}
+      <strong>{{ comp.label }}</strong>{% if not loop.last %},{% endif %}
+    {% endfor %},
+    which are used by the most other parts of the codebase.
+    {% endif %}
+
+    {# Cyclic deps warning if any #}
+    {% if arch.cyclic_dependencies %}
+    Note: {{ arch.cyclic_dependencies | length }}
+    circular dependency
+    {% if arch.cyclic_dependencies | length > 1 %}chains were{% else %}chain was{% endif %}
+    detected, which may make the codebase harder to maintain.
+    {% endif %}
+
+    {# Graph summary #}
+    {% if arch.graph_stats %}
+    Overall, Agent 2 identified
+    <strong>{{ arch.graph_stats.total_nodes }}</strong> components and
+    <strong>{{ arch.graph_stats.total_edges }}</strong> relationships
+    in this repository.
+    {% endif %}
+
+  </p>
+</section>
+
+<!-- ── 2. REPOSITORY ARCHITECTURE DIAGRAM ─────────────────────────── -->
+<section class="card">
+  <h2 class="section-title">🗺️ Repository Architecture Diagram</h2>
+  <p class="section-hint">
+    High-level overview of <strong>{{ repo }}</strong> based on Agent 2 analysis.
+  </p>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:0;margin-top:1.2rem;padding-bottom:.5rem;">
+
+    {# ── Row 1: Repository (always shown) ──────────────────────── #}
+    <div style="background:rgba(88,166,255,.12);border:2px solid var(--accent);
+                border-radius:8px;padding:11px 36px;font-size:.95rem;font-weight:700;
+                min-width:240px;text-align:center;color:var(--accent);letter-spacing:.02em;">
+      {{ (arch.repo_name or repo).split('/')[-1] }}
+      <small style="display:block;font-weight:400;font-size:.75rem;opacity:.75;margin-top:.1rem;">
+        Repository
+      </small>
+    </div>
+    <div style="color:var(--text2);font-size:1.3rem;line-height:1.5;">↓</div>
+
+    {# ── Row 2: Entry Points (if detected) ─────────────────────── #}
+    {% if arch.entry_points %}
+    <div style="background:rgba(63,185,80,.1);border:1px solid var(--accent2);
+                border-radius:8px;padding:10px 32px;font-size:.88rem;font-weight:600;
+                min-width:240px;text-align:center;color:var(--accent2);">
+      Main Entry Point{% if arch.entry_points | length > 1 %}s{% endif %}
+      <small style="display:block;font-weight:400;font-size:.75rem;opacity:.8;margin-top:.1rem;">
+        {% set ep_names = [] %}
+        {% for ep in arch.entry_points[:2] %}
+          {% set _ = ep_names.append(ep.split('\\')[-1].split('/')[-1]) %}
+        {% endfor %}
+        {{ ep_names | join(', ') }}{% if arch.entry_points | length > 2 %} + {{ arch.entry_points | length - 2 }} more{% endif %}
+      </small>
+    </div>
+    <div style="color:var(--text2);font-size:1.3rem;line-height:1.5;">↓</div>
+    {% endif %}
+
+    {# ── Rows 3+: Architectural layers (name + file count only) ── #}
+    {% set layer_order  = ['Presentation', 'Service', 'Data', 'Unclassified'] %}
+    {% set layer_styles = {
+      'Presentation': ('rgba(88,166,255,.08)',  'var(--accent)',  'API / Routes / Views'),
+      'Service':      ('rgba(188,140,255,.08)', 'var(--accent4)', 'Business Logic / Processing'),
+      'Data':         ('rgba(63,185,80,.08)',   'var(--accent2)', 'Models / Storage / DB'),
+      'Unclassified': ('rgba(240,136,62,.08)',  'var(--accent3)', 'Utilities / Helpers')
+    } %}
+
+    {# Build ordered list of present layers #}
+    {% set present = [] %}
+    {% for lname in layer_order %}
+      {% if lname in arch.layers %}{% set _ = present.append(lname) %}{% endif %}
+    {% endfor %}
+    {% for lname in arch.layers %}
+      {% if lname not in layer_order %}{% set _ = present.append(lname) %}{% endif %}
+    {% endfor %}
+
+    {% if present %}
+      {% for lname in present %}
+        {% set lfiles = arch.layers[lname] %}
+        {% set lstyle = layer_styles.get(lname, ('var(--bg3)', 'var(--text)', lname)) %}
+        <div style="background:{{ lstyle[0] }};border:1px solid {{ lstyle[1] }};
+                    border-radius:8px;padding:10px 32px;font-size:.88rem;font-weight:600;
+                    min-width:240px;text-align:center;color:{{ lstyle[1] }};">
+          {{ lname }} Layer
+          <small style="display:block;font-size:.74rem;font-weight:400;
+                        opacity:.85;margin-top:.15rem;color:var(--text2);">
+            {{ lstyle[2] }} &nbsp;·&nbsp; {{ lfiles | length }} file{% if lfiles | length != 1 %}s{% endif %}
+          </small>
+        </div>
+        {% if not loop.last %}
+        <div style="color:var(--text2);font-size:1.3rem;line-height:1.5;">↓</div>
+        {% endif %}
+      {% endfor %}
+
+    {% else %}
+      {# Fallback: no layers detected — show top 4 key components by name only #}
+      {% set shown_comps = [] %}
+      {% for comp in arch.key_components %}
+        {% if comp.type in ('File', 'Class') and shown_comps | length < 4 %}
+          {% set _ = shown_comps.append(comp) %}
+        {% endif %}
+      {% endfor %}
+      {% if not shown_comps %}
+        {% set shown_comps = arch.key_components[:4] %}
+      {% endif %}
+      {% for comp in shown_comps %}
+      <div style="background:var(--bg3);border:1px solid var(--border);
+                  border-radius:8px;padding:10px 32px;font-size:.88rem;
+                  min-width:240px;text-align:center;">
+        {{ comp.label.split('\\')[-1].split('/')[-1] }}
+        <small style="display:block;font-size:.72rem;color:var(--text2);">{{ comp.type }}</small>
+      </div>
+      {% if not loop.last %}
+      <div style="color:var(--text2);font-size:1.3rem;line-height:1.5;">↓</div>
+      {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {# ── Final row: Developer Q&A (RAG layer) ──────────────────── #}
+    {% if arch.graph_stats %}
+    <div style="color:var(--text2);font-size:1.3rem;line-height:1.5;">↓</div>
+    <div style="background:rgba(240,136,62,.08);border:1px solid var(--accent3);
+                border-radius:8px;padding:10px 32px;font-size:.88rem;font-weight:600;
+                min-width:240px;text-align:center;color:var(--accent3);">
+      RAG + Developer Q&amp;A
+      <small style="display:block;font-weight:400;font-size:.74rem;opacity:.8;margin-top:.1rem;">
+        {{ arch.graph_stats.total_nodes }} components · {{ arch.graph_stats.total_edges }} relationships indexed
+      </small>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+
+<!-- ── 3. DETECTED LAYERS / KEY COMPONENTS ────────────────────────── -->
+<div class="arch-grid">
+
+  {% if arch.layers %}
+  <section class="card">
+    <h2 class="section-title">🧱 Detected Layers</h2>
+    {% for layer, files in arch.layers.items() %}
+    <div class="layer-block layer-{{ loop.index }}">
+      <h3 class="layer-name">{{ layer }} Layer</h3>
+      <div class="layer-files">
+        {% for f in files[:10] %}
+        <span class="file-chip">{{ f }}</span>
+        {% endfor %}
+        {% if files | length > 10 %}
+        <span class="more-chip">+{{ files | length - 10 }} more</span>
+        {% endif %}
+      </div>
+    </div>
+    {% if not loop.last %}<div class="layer-arrow">↓</div>{% endif %}
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if arch.key_components %}
+  <section class="card">
+    <h2 class="section-title">⭐ Key Components</h2>
+    <div class="comp-list">
+      {% for comp in arch.key_components %}
+      <div class="comp-item">
+        <span class="comp-rank">{{ loop.index }}</span>
+        <span class="comp-label">{{ comp.label }}</span>
+        <span class="comp-type badge-{{ comp.type | lower }}">{{ comp.type }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+</div>
+
+<!-- ── 4. ARCHITECTURE DETAILS ────────────────────────────────────── -->
+<div class="arch-grid">
+
+  {% if arch.entry_points %}
+  <section class="card">
+    <h2 class="section-title">🚪 Entry Points</h2>
+    {% for ep in arch.entry_points %}
+    <div class="entity-item">
+      <span class="entity-type ep">EP</span>
+      <span class="entity-name">{{ ep }}</span>
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <section class="card">
+    <h2 class="section-title">🔄 Cyclic Dependencies</h2>
+    {% if arch.cyclic_dependencies %}
+      {% for cycle in arch.cyclic_dependencies[:10] %}
+      <div class="cycle-item">{{ cycle | join(" → ") }}</div>
+      {% endfor %}
+    {% else %}
+      <p class="empty-msg">No cyclic dependencies detected.</p>
+    {% endif %}
+  </section>
+
+  {% if arch.graph_stats %}
+  <section class="card">
+    <h2 class="section-title">📊 Analysis Statistics</h2>
+    {% set gs = arch.graph_stats %}
+    {% if gs.node_types %}
+    {% for nt, cnt in gs.node_types.items() %}
+    <div class="kv-row"><span>{{ nt }}s analyzed</span><span>{{ cnt }}</span></div>
+    {% endfor %}
+    {% endif %}
+    {% if gs.edge_types %}
+    <h4 style="margin:.8rem 0 .4rem;">Relationships Found</h4>
+    {% for et, cnt in gs.edge_types.items() %}
+    <div class="kv-row"><span>{{ et }}</span><span>{{ cnt }}</span></div>
+    {% endfor %}
+    {% endif %}
+  </section>
+  {% endif %}
+
+</div>
+
+<!-- ── Download ───────────────────────────────────────────────────── -->
+<section class="card" style="padding:1rem 1.5rem;">
+  <div style="display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;">
+    {# Use repo directly (owner/repo) — Flask <path:> route needs a literal slash, not %2F #}
+    <a href="/api/download/{{ repo }}/architecture-report"
+       class="btn btn-outline">
+      ⬇ Download Architecture Report
+    </a>
+    <a href="/dashboard?repo={{ repo | urlencode }}" class="btn btn-outline btn-sm">
+      ← Back to Dashboard
+    </a>
+  </div>
+</section>
+
+{% elif repo %}
+<section class="card empty-card">
+  <p>No architecture analysis for <strong>{{ repo }}</strong> yet.</p>
+  <p>Go to the <a href="/dashboard?repo={{ repo | urlencode }}">Dashboard</a> and click <strong>Run Agent 2</strong>.</p>
+</section>
+{% else %}
+<section class="card empty-card">
+  <p>No repository selected. <a href="/">Run an analysis →</a></p>
+</section>
+{% endif %}
+
+{% endblock %}

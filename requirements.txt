@@ -1,0 +1,29 @@
+# Web
+flask==3.0.3
+python-dotenv==1.0.1
+
+# GitHub & HTTP
+requests==2.32.3
+PyGithub==2.3.0
+
+# Code parsing
+javalang==0.13.0
+tree-sitter==0.21.3
+
+# Graph & visualisation
+networkx==3.3
+pyvis==0.3.2
+matplotlib==3.9.0
+
+# RAG / NLP
+sentence-transformers==3.0.1
+faiss-cpu==1.8.0
+langchain==0.2.12
+langchain-community==0.2.11
+langchain-openai==0.1.17
+openai==1.37.1
+
+# Utilities
+tqdm==4.66.4
+pydantic==2.8.2
+gitpython==3.1.43

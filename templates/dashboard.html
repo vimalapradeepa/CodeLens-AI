@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}CodeLens AI — Analysis Dashboard{% endblock %}
+{% block content %}
+
+<section class="page-header">
+  <h1>Analysis Dashboard</h1>
+  {% if repo %}
+  <p class="page-subtitle">
+    <a href="{{ 'https://github.com/' ~ repo }}" target="_blank">{{ repo }}</a>
+  </p>
+  {% endif %}
+</section>
+
+<!-- Background-analysis progress banner (shown while Agent 2 / RAG still running) -->
+<div id="bg-analysis-banner" style="display:none"
+     class="card"
+     style="border-color:var(--accent);padding:.8rem 1.5rem;margin-bottom:1rem;">
+  <p style="color:var(--accent);font-size:.9rem;margin:0;">
+    ⟳ <strong>Analysis continuing in background</strong> —
+    <span id="bg-stage-text">Agent 2 and RAG index are being built…</span>
+    <span style="color:var(--text2);font-size:.8rem;">
+      Architecture and AI Chat will be available shortly.
+    </span>
+  </p>
+</div>
+
+<!-- Repo selector -->
+{% if repos %}
+<section class="card slim-card">
+  <label class="select-label">Select Repository:</label>
+  <select class="repo-select" onchange="location.href='/dashboard?repo='+encodeURIComponent(this.value)">
+    <option value="">— choose —</option>
+    {% for r in repos %}
+    <option value="{{ r }}" {% if r == repo %}selected{% endif %}>{{ r }}</option>
+    {% endfor %}
+  </select>
+  {% if repo %}
+  <button class="btn btn-outline btn-sm" onclick="runAgent2('{{ repo }}')">
+    ⬡ Run Agent 2
+  </button>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if data %}
+  {% set stats = data.agent1.statistics if data.agent1 else {} %}
+  {% set knowledge = data.agent1.knowledge if data.agent1 else {} %}
+  {% set repo_info = knowledge.repository if knowledge else {} %}
+
+  <!-- Stats cards -->
+  <section class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">📁</div>
+      <div class="stat-value">{{ stats.total_files or 0 }}</div>
+      <div class="stat-label">Total Files</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📄</div>
+      <div class="stat-value">{{ stats.source_files or 0 }}</div>
+      <div class="stat-label">Source Files</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🏛️</div>
+      <div class="stat-value">{{ stats.classes or 0 }}</div>
+      <div class="stat-label">Classes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">⚙️</div>
+      <div class="stat-value">{{ stats.methods or 0 }}</div>
+      <div class="stat-label">Methods</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">ƒ</div>
+      <div class="stat-value">{{ stats.functions or 0 }}</div>
+      <div class="stat-label">Functions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📦</div>
+      <div class="stat-value">{{ stats.imports or 0 }}</div>
+      <div class="stat-label">Imports</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🌐</div>
+      <div class="stat-value">{{ stats.lang_counts | length if stats.lang_counts else 0 }}</div>
+      <div class="stat-label">Languages</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🔗</div>
+      <div class="stat-value">{{ stats.dependencies | length if stats.dependencies else 0 }}</div>
+      <div class="stat-label">Dependencies</div>
+    </div>
+  </section>
+
+  <div class="dashboard-grid">
+
+    <!-- File Explorer -->
+    <section class="card">
+      <h2 class="section-title">📂 Source Files</h2>
+      <div class="file-list">
+        {% set files = knowledge.files if knowledge else [] %}
+        {% for f in files[:50] %}
+        <div class="file-item {% if f.error %}file-error{% endif %}">
+          <span class="file-lang {{ f.language | lower }}">{{ f.language }}</span>
+          <span class="file-path">{{ f.path }}</span>
+          {% if f.error %}<span class="file-err-msg" title="{{ f.error }}">⚠</span>{% endif %}
+        </div>
+        {% endfor %}
+        {% if files | length > 50 %}
+        <p class="more-hint">... and {{ files | length - 50 }} more files</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Code Structure -->
+    <section class="card">
+      <h2 class="section-title">🏗️ Code Structure</h2>
+      <div class="structure-tabs">
+        <button class="tab-btn active" onclick="showTab('tab-classes')">Classes</button>
+        <button class="tab-btn" onclick="showTab('tab-functions')">Functions</button>
+        <button class="tab-btn" onclick="showTab('tab-deps')">Dependencies</button>
+      </div>
+
+      <div id="tab-classes" class="tab-content">
+        {% set ns = namespace(count=0) %}
+        {% for f in files %}
+          {% for cls in f.classes %}
+            {% if ns.count < 60 %}
+            <div class="entity-item">
+              <span class="entity-type class">C</span>
+              <span class="entity-name">{{ cls.name if cls is mapping else cls }}</span>
+              <span class="entity-file">{{ f.path }}</span>
+            </div>
+            {% set ns.count = ns.count + 1 %}
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+        {% if ns.count == 0 %}<p class="empty-msg">No classes found.</p>{% endif %}
+      </div>
+
+      <div id="tab-functions" class="tab-content hidden">
+        {% set ns2 = namespace(count=0) %}
+        {% for f in files %}
+          {% for fn in f.functions %}
+            {% if ns2.count < 60 %}
+            <div class="entity-item">
+              <span class="entity-type func">F</span>
+              <span class="entity-name">{{ fn }}</span>
+              <span class="entity-file">{{ f.path }}</span>
+            </div>
+            {% set ns2.count = ns2.count + 1 %}
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+        {% if ns2.count == 0 %}<p class="empty-msg">No standalone functions found.</p>{% endif %}
+      </div>
+
+      <div id="tab-deps" class="tab-content hidden">
+        {% if stats.dependencies %}
+          {% for dep in stats.dependencies[:60] %}
+          <div class="entity-item">
+            <span class="entity-type dep">D</span>
+            <span class="entity-name">{{ dep }}</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="empty-msg">No dependencies detected.</p>
+        {% endif %}
+      </div>
+    </section>
+
+  </div><!-- /dashboard-grid -->
+
+  <!-- Downloads -->
+  <section class="card">
+    <h2 class="section-title">📥 Downloads</h2>
+    <div class="download-row">
+      <a href="/api/download/{{ repo | urlencode }}/knowledge" class="btn btn-outline">
+        ⬇ Knowledge JSON
+      </a>
+      <a href="/api/download/{{ repo | urlencode }}/report" class="btn btn-outline">
+        ⬇ Analysis Report (.md)
+      </a>
+      <a href="/api/download/{{ repo | urlencode }}/architecture-report" class="btn btn-outline">
+        ⬇ Architecture Report
+      </a>
+      <a href="/architecture?repo={{ repo | urlencode }}" class="btn btn-primary">
+        View Architecture →
+      </a>
+    </div>
+  </section>
+
+{% elif repo %}
+  <section class="card empty-card">
+    <p>Analysis data not found for <strong>{{ repo }}</strong>.</p>
+    <p>Please run the analysis pipeline from the <a href="/">home page</a> first.</p>
+  </section>
+{% else %}
+  <section class="card empty-card">
+    <p>No repository selected. <a href="/">Run an analysis →</a></p>
+  </section>
+{% endif %}
+
+{% endblock %}
+{% block scripts %}
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.remove('hidden');
+  event.target.classList.add('active');
+}
+
+function runAgent2(repo) {
+  fetch('/api/run-agent2/' + encodeURIComponent(repo), {method: 'POST'})
+    .then(r => r.json())
+    .then(() => {
+      alert('Agent 2 started. Refresh in a moment to see the architecture graph.');
+    });
+}
+
+/* ── Background analysis progress banner ───────────────────
+   Poll /api/status while Agent 2 / RAG are still running
+   after early navigation from Discovery.
+   Hide the banner once everything is done or on error.
+──────────────────────────────────────────────────────────── */
+(function startBackgroundPoller() {
+  const banner   = document.getElementById('bg-analysis-banner');
+  const stageEl  = document.getElementById('bg-stage-text');
+  if (!banner) return;
+
+  let pollTimer = null;
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    banner.style.display = 'none';
+  }
+
+  async function checkStatus() {
+    let data;
+    try {
+      const resp = await fetch('/api/status');
+      data = await resp.json();
+    } catch (_) { return; }
+
+    // If nothing is running and no analysis was started, hide banner
+    if (!data.running && !data.analysis_started) { stopPolling(); return; }
+    // If there was an error, hide banner (error already shown on Discovery)
+    if (data.error) { stopPolling(); return; }
+    // If fully done, hide banner
+    if (data.done && data.rag_done) { stopPolling(); return; }
+
+    // Show banner with current stage description
+    if (data.running || (!data.done)) {
+      banner.style.display = '';
+      if (!data.agent1_done) {
+        stageEl.textContent = 'Agent 1 — analysing source code…';
+      } else if (!data.agent2_done) {
+        stageEl.textContent = 'Agent 2 — building semantic code graph…';
+      } else if (!data.rag_done) {
+        stageEl.textContent = 'Building RAG index for AI Chat…';
+      } else {
+        stageEl.textContent = 'Finalising…';
+      }
+    }
+  }
+
+  // Run once immediately, then every 3 s
+  checkStatus();
+  pollTimer = setInterval(checkStatus, 3000);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,179 @@
+{
+  "repo": "user/sample",
+  "nodes": [
+    {
+      "id": "user/sample",
+      "node_type": "Repository",
+      "label": "user/sample"
+    },
+    {
+      "id": "src/models.py",
+      "node_type": "File",
+      "label": "src/models.py",
+      "language": "Python"
+    },
+    {
+      "id": "module::database",
+      "node_type": "Module",
+      "label": "database"
+    },
+    {
+      "id": "module::flask",
+      "node_type": "Module",
+      "label": "flask"
+    },
+    {
+      "id": "src/models.py::User",
+      "node_type": "Class",
+      "label": "User",
+      "file": "src/models.py"
+    },
+    {
+      "id": "src/models.py::User::login",
+      "node_type": "Method",
+      "label": "login",
+      "class_node": "src/models.py::User"
+    },
+    {
+      "id": "src/models.py::User::logout",
+      "node_type": "Method",
+      "label": "logout",
+      "class_node": "src/models.py::User"
+    },
+    {
+      "id": "src/models.py::get_user",
+      "node_type": "Function",
+      "label": "get_user",
+      "file": "src/models.py"
+    },
+    {
+      "id": "src/services.py",
+      "node_type": "File",
+      "label": "src/services.py",
+      "language": "Python"
+    },
+    {
+      "id": "module::models",
+      "node_type": "Module",
+      "label": "models"
+    },
+    {
+      "id": "src/services.py::AuthService",
+      "node_type": "Class",
+      "label": "AuthService",
+      "file": "src/services.py"
+    },
+    {
+      "id": "src/services.py::AuthService::authenticate",
+      "node_type": "Method",
+      "label": "authenticate",
+      "class_node": "src/services.py::AuthService"
+    },
+    {
+      "id": "main.py",
+      "node_type": "File",
+      "label": "main.py",
+      "language": "Python"
+    },
+    {
+      "id": "module::services",
+      "node_type": "Module",
+      "label": "services"
+    },
+    {
+      "id": "main.py::main",
+      "node_type": "Function",
+      "label": "main",
+      "file": "main.py"
+    }
+  ],
+  "edges": [
+    {
+      "source": "user/sample",
+      "target": "src/models.py",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "user/sample",
+      "target": "src/services.py",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "user/sample",
+      "target": "main.py",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "src/models.py",
+      "target": "module::database",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "src/models.py",
+      "target": "module::flask",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "src/models.py",
+      "target": "src/models.py::User",
+      "relation": "DEFINES"
+    },
+    {
+      "source": "src/models.py",
+      "target": "src/models.py::get_user",
+      "relation": "DEFINES"
+    },
+    {
+      "source": "src/models.py::User",
+      "target": "src/models.py::User::login",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "src/models.py::User",
+      "target": "src/models.py::User::logout",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "src/services.py",
+      "target": "module::models",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "src/services.py",
+      "target": "src/services.py::AuthService",
+      "relation": "DEFINES"
+    },
+    {
+      "source": "src/services.py::AuthService",
+      "target": "src/services.py::AuthService::authenticate",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "main.py",
+      "target": "module::services",
+      "relation": "IMPORTS"
+    },
+    {
+      "source": "main.py",
+      "target": "main.py::main",
+      "relation": "DEFINES"
+    }
+  ],
+  "stats": {
+    "total_nodes": 15,
+    "total_edges": 14,
+    "node_types": {
+      "Repository": 1,
+      "File": 3,
+      "Module": 4,
+      "Class": 2,
+      "Method": 3,
+      "Function": 2
+    },
+    "edge_types": {
+      "CONTAINS": 6,
+      "IMPORTS": 4,
+      "DEFINES": 4
+    }
+  }
+}

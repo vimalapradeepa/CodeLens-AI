@@ -1,0 +1,19 @@
+{
+  "repo": "elastic/elasticsearch",
+  "nodes": [
+    {
+      "id": "elastic/elasticsearch",
+      "node_type": "Repository",
+      "label": "elastic/elasticsearch"
+    }
+  ],
+  "edges": [],
+  "stats": {
+    "total_nodes": 1,
+    "total_edges": 0,
+    "node_types": {
+      "Repository": 1
+    },
+    "edge_types": {}
+  }
+}

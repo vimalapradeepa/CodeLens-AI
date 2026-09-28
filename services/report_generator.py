@@ -1,0 +1,142 @@
+"""
+Report Generator (Agent 1 component)
+Produces a human-readable Markdown/text report from the knowledge document.
+"""
+
+import os
+import logging
+from typing import Dict
+from datetime import datetime
+
+from config import OUTPUT_DIR
+
+logger = logging.getLogger(__name__)
+
+
+def generate_report(knowledge: Dict) -> str:
+    """
+    Generate a structured text report from a knowledge dict.
+    Returns the report as a string.
+    """
+    repo = knowledge.get("repository", {})
+    stats = knowledge.get("statistics", {})
+    files = knowledge.get("files", [])
+    errors = knowledge.get("scan_errors", [])
+
+    lines = []
+    def h(text, level=1):
+        lines.append(("#" * level) + " " + text)
+        lines.append("")
+
+    def row(label, value):
+        lines.append(f"- **{label}**: {value}")
+
+    # ── Header ─────────────────────────────────────────────────
+    h("CodeLens AI — Repository Analysis Report")
+    lines.append(f"*Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}*")
+    lines.append("")
+
+    # ── Repository Overview ─────────────────────────────────────
+    h("Repository Overview", 2)
+    row("Name",            repo.get("full_name", ""))
+    row("URL",             repo.get("url", ""))
+    row("Description",     repo.get("description") or "No description.")
+    row("Primary Language",repo.get("primary_language", "Unknown"))
+    row("Stars",           repo.get("stars", 0))
+    row("Forks",           repo.get("forks", 0))
+    row("Size",            f"{repo.get('size_kb', 0)} KB")
+    row("Last Updated",    repo.get("updated_at", "N/A"))
+    if repo.get("topics"):
+        row("Topics", ", ".join(repo["topics"]))
+    lines.append("")
+
+    # ── Statistics ──────────────────────────────────────────────
+    h("Repository Statistics", 2)
+    row("Total Files",   stats.get("total_files", 0))
+    row("Source Files",  stats.get("source_files", 0))
+    row("Python Files",  stats.get("python_files", 0))
+    row("Java Files",    stats.get("java_files", 0))
+    row("Classes",       stats.get("classes", 0))
+    row("Methods",       stats.get("methods", 0))
+    row("Functions",     stats.get("functions", 0))
+    row("Unique Imports",stats.get("imports", 0))
+    if stats.get("dependencies"):
+        row("Detected Dependencies", ", ".join(stats["dependencies"][:30]))
+    lines.append("")
+
+    # ── Language Breakdown ──────────────────────────────────────
+    lang_counts = stats.get("lang_counts", {})
+    if lang_counts:
+        h("Language Breakdown", 2)
+        for lang, count in sorted(lang_counts.items(), key=lambda x: -x[1]):
+            lines.append(f"  - {lang}: {count} files")
+        lines.append("")
+
+    # ── Source Files (top 40) ───────────────────────────────────
+    h("Analysed Source Files", 2)
+    py_files  = [f for f in files if f.get("language") == "Python" and not f.get("error")]
+    java_files = [f for f in files if f.get("language") == "Java"  and not f.get("error")]
+    err_files  = [f for f in files if f.get("error")]
+
+    if py_files:
+        h("Python Files", 3)
+        for f in py_files[:40]:
+            lines.append(f"### `{f['path']}`")
+            classes = f.get("classes", [])
+            if classes:
+                for cls in classes:
+                    cname = cls.get("name", "?") if isinstance(cls, dict) else str(cls)
+                    methods = cls.get("methods", []) if isinstance(cls, dict) else []
+                    bases = cls.get("bases", []) if isinstance(cls, dict) else []
+                    base_str = f" (extends: {', '.join(bases)})" if bases else ""
+                    lines.append(f"  - Class `{cname}`{base_str}: {', '.join(methods[:10]) or 'no methods'}")
+            funcs = f.get("functions", [])
+            if funcs:
+                lines.append(f"  - Functions: {', '.join(funcs[:15])}")
+            imps = f.get("imports", [])
+            if imps:
+                lines.append(f"  - Imports: {', '.join(imps[:10])}")
+            lines.append("")
+
+    if java_files:
+        h("Java Files", 3)
+        for f in java_files[:40]:
+            lines.append(f"### `{f['path']}`")
+            if f.get("package"):
+                lines.append(f"  - Package: `{f['package']}`")
+            for cls in f.get("classes", []):
+                cname = cls.get("name", "?")
+                methods = cls.get("methods", [])
+                ext = cls.get("extends")
+                ext_str = f" extends `{ext}`" if ext else ""
+                lines.append(f"  - Class `{cname}`{ext_str}: {', '.join(methods[:10]) or 'no methods'}")
+            lines.append("")
+
+    if err_files:
+        h("Files with Errors", 3)
+        for f in err_files[:20]:
+            lines.append(f"  - `{f['path']}`: {f['error']}")
+        lines.append("")
+
+    # ── Scan Errors ─────────────────────────────────────────────
+    if errors:
+        h("Scan Errors", 2)
+        for e in errors[:20]:
+            lines.append(f"  - {e}")
+        lines.append("")
+
+    lines.append("---")
+    lines.append("*Report generated by CodeLens AI — Repository Analysis Agent*")
+
+    return "\n".join(lines)
+
+
+def save_report(report_text: str, owner: str, name: str) -> str:
+    """Save the report text to output directory. Returns file path."""
+    repo_dir = os.path.join(OUTPUT_DIR, f"{owner}__{name}")
+    os.makedirs(repo_dir, exist_ok=True)
+    out_path = os.path.join(repo_dir, "report.md")
+    with open(out_path, "w", encoding="utf-8") as fh:
+        fh.write(report_text)
+    logger.info("Report saved → %s", out_path)
+    return out_path

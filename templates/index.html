@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}CodeLens AI — Analyze Repositories{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <h1 class="hero-title">CodeLens <span class="gradient-text">AI</span></h1>
+  <p class="hero-subtitle">AI-Powered Multi-Agent Open Source Project Analyzer</p>
+  <p class="hero-desc">Submit GitHub repositories, filter by keywords, and let two specialized agents analyze structure, relationships, and architecture.</p>
+</section>
+
+<section class="card form-card">
+  <h2 class="section-title">Repository URLs <span class="badge">5–10 required</span></h2>
+  <p class="section-hint">Add between 5 and 10 GitHub repository URLs.</p>
+
+  <div id="url-list" class="url-list">
+    <!-- Rows injected by JS -->
+  </div>
+
+  <div class="url-actions">
+    <button id="add-url-btn" class="btn btn-outline" onclick="addUrlRow()">
+      <span>+</span> Add Repository
+    </button>
+    <span id="url-count-msg" class="count-msg">0 / 10 repositories</span>
+  </div>
+
+  <!-- Duplicate warning — shown/hidden dynamically by JS -->
+  <div id="dup-warning" class="dup-warning hidden"></div>
+
+  <div id="url-errors" class="error-panel hidden"></div>
+
+  <hr class="divider" />
+
+  <h2 class="section-title">Keywords</h2>
+  <p class="section-hint">Comma-separated keywords used to rank repositories by relevance.</p>
+  <input
+    id="keywords-input"
+    type="text"
+    class="text-input"
+    placeholder="e.g. machine learning, RAG, NLP"
+  />
+
+  <div class="form-actions">
+    <button id="analyze-btn" class="btn btn-primary" onclick="startAnalysis()">
+      ⬡ Find &amp; Analyze
+    </button>
+  </div>
+</section>
+
+<!-- Progress Panel -->
+<section id="progress-panel" class="card hidden">
+  <h2 class="section-title">Analysis Progress</h2>
+  <div id="progress-steps" class="progress-steps"></div>
+  <div id="progress-spinner" class="spinner"></div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Pre-populate with 5 empty rows on load
+document.addEventListener("DOMContentLoaded", () => {
+  for (let i = 0; i < 5; i++) addUrlRow();
+});
+</script>
+{% endblock %}

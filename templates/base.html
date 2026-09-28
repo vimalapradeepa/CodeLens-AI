@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}CodeLens AI{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- ── Navigation ─────────────────────────────────────────── -->
+<nav class="navbar">
+  <a href="/" class="nav-brand">
+    <span class="brand-icon">⬡</span>
+    <span class="brand-text">CodeLens <span class="brand-ai">AI</span></span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="/" class="nav-link {% if request.path=='/' %}active{% endif %}">Analyze</a></li>
+    <li><a href="/discovery" class="nav-link {% if request.path=='/discovery' %}active{% endif %}">Discovery</a></li>
+    <li><a href="/dashboard" class="nav-link {% if request.path=='/dashboard' %}active{% endif %}">Dashboard</a></li>
+    <li><a href="/architecture" class="nav-link {% if request.path=='/architecture' %}active{% endif %}">Architecture</a></li>
+    <li><a href="/agents" class="nav-link {% if request.path=='/agents' %}active{% endif %}">Reports</a></li>
+    <li><a href="/chat" class="nav-link {% if request.path=='/chat' %}active{% endif %}">AI Chat</a></li>
+    <li><a href="/about" class="nav-link {% if request.path=='/about' %}active{% endif %}">About</a></li>
+  </ul>
+</nav>
+
+<!-- ── Main Content ───────────────────────────────────────── -->
+<main class="main-content">
+  {% block content %}{% endblock %}
+</main>
+
+<!-- ── Footer ─────────────────────────────────────────────── -->
+<footer class="footer">
+  <p>CodeLens AI &mdash; AI-Powered Multi-Agent Open Source Project Analyzer &mdash; Final Year Project</p>
+</footer>
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
